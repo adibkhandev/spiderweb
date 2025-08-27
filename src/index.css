@@ -6,8 +6,112 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* Works in Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Works in Firefox */
+html, body {
+  scrollbar-width: none;   /* Firefox */
+  -ms-overflow-style: none; /* IE, Edge */
+}
+
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+.page-container{
+  min-height: 100svh;
+  width: 100svw;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.cover-container-main{
+  display: flex;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  /* min-height: 100vh !important; */
+  min-width: 100vw !important;
+  justify-content: flex-start;
+  width: 100svw !important;
+  height: 100%;
+  margin: 0 !important;
+ padding: 0 !important;
+}
+.rpv-thumbnail__cover-image , .rpv-thumbnail__cover , .rpv-thumbnail__cover-inner{
+  min-height: 0 !important ;
+  width: 20em !important;
+}
+.rpv-thumbnail__cover{
+  display: block !important;
+  min-height: none !important;
+  margin: 0em 0.5em;
+}
+.rpv-thumbnail__cover-inner{
+  display: block !important;
+  aspect-ratio: 3/4 !important;
+}
+.rpv-thumbnail__cover-image{
+  width: 100%;
+}
+.viewer{ 
+  width: 0; 
+  height: 0; 
+  overflow: 'hidden'
+ }
+ .cover-container{
+    position: relative;
+ }
+ .fore-ground{
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    border: 1px black solid;
+    opacity: 1;
+ }
+ .drop-container{
+  height: 100%;
+  width: 100%;
+  position: relative;
+ }
+ .drop-icon-cont{
+     position: absolute;
+     top: 0em;
+     right: 0em;
+     height: 4em;
+     width: 4em;
+     z-index: 4;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+ }
+ .drop-down{
+    height: 50%;
+    width: 50%;
+ }
+ .dropdown-menu{
+    position: absolute;
+    right: 1em;
+    top: 3.2em;
+    border-radius: 4px;
+    width: 8rem;
+    height: 4rem;
+    overflow: hidden;
+ }
+ .section{
+  width: 100%;
+  height: 2rem;
+  font-size:0.34rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: beige;
+
+ }
