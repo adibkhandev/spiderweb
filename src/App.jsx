@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { get , del , set} from "idb-keyval";
 import { useState } from 'react';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { thumbnailPlugin } from '@react-pdf-viewer/thumbnail';
@@ -6,19 +7,163 @@ import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/thumbnail/lib/styles/index.css';
 import pdfFile from './../src/files/demo.pdf'
 import dropDown from './images/down-arrow.png'
+import trash from './images/trash.png'
+import FullScreenPdfDrop from './Upload';
 const App = () => {
     const pdfUrl = pdfFile
     const thumbnailPluginInstance = thumbnailPlugin();
     const { Cover } = thumbnailPluginInstance;
     const [totalPages, setTotalPages] = useState(0);
     const [startOrEnd,setStartOrEnd] = useState(null)
+    
     const [arrayOfPageNumbers,setArrayOfPageNumbers] = useState([])
+    const [pdfile,setPdfile] = useState(null)
+     const [previewUrl, setPreviewUrl] = useState(null);
+     const [qpms,setQpms] = useState('qp')
+    console.log("Rendering Parent");
+    const [active,setActive] = useState({
+        start:null,
+        end:null,
+        index:null,
+    })
+    const [prev,setPrev]=useState([])
     useEffect(()=>{
-        console.log(arrayOfPageNumbers,'a')
+      get("array").then((array) => {
+        if (array) {
+            setArrayOfPageNumbers([...array]);
+            setPrev(array)
+        }
+      });
+    },[])
+    useEffect(()=>{
+        const lastIndex = arrayOfPageNumbers.length - 1
+        const lastObject = arrayOfPageNumbers[lastIndex]
+        setActive({
+            start:lastObject?lastObject.start:null,
+            end:lastObject?lastObject.end:null,
+            index:lastObject?lastIndex:null
+        })
+        if(arrayOfPageNumbers.length>0 && prev.length<arrayOfPageNumbers.length){
+            set("array", arrayOfPageNumbers)
+            .then(()=>{
+                console.log('array saved')
+            })
+        }
     },[arrayOfPageNumbers])
-    return (
-        <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+    useEffect(()=>{
+        console.log(arrayOfPageNumbers,arrayOfPageNumbers.length,'aa')
+    },[arrayOfPageNumbers])
+    useEffect(()=>{
+        console.log(pdfile,pdfUrl,'pd')
+    },[pdfile,pdfUrl])
+    useEffect(()=>{
+        if (!pdfile) {
+            setPreviewUrl(null);
+            get("pdfInDb").then((savedFile) => {
+                if (savedFile) setPdfile(savedFile);
+            });
+            return;
+        }
+       if(pdfile){
+           const buffer = async() => {
+                const arrayBuffer = await pdfile.arrayBuffer();
+                const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+                const url = URL.createObjectURL(blob);
+                setPreviewUrl(url);
+            } 
+           buffer()
+       }
+       return () => {
+           if (previewUrl) URL.revokeObjectURL(previewUrl);
+       }
+    },[pdfile])
+
+      
+      const handleUpload = async () => {
+            if (!pdfile) {
+            alert("Please select a PDF file firstt!");
+            return;
+            }
+            
+            const formData = new FormData();
+            formData.append("file", pdfile);
+
+            // Append each range object as JSON string
+            arrayOfPageNumbers.forEach((range, index) => {
+                console.log(range,'ds')
+            !range.topic?alert('Topic missing'):console.log('ok')
+            const newRange = {
+                ...range,
+                start:range.start + 2,
+                end:range.end + 2,
+            }
+            formData.append("ranges", JSON.stringify(newRange));
+            });
+             for (let pair of formData.entries()) {
+                console.log(pair[0] + ":", pair[1]);
+            }
+            formData.append("doctype",JSON.stringify(qpms))
+            for (let [key, value] of formData.entries()) {
+            console.log(key, value,'yooooo');
+            }
+
+
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/split-pdf/", {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await response.json();
+                   console.log("Server response:", data);
+                   await del("pdfInDb")
+                   setPdfile(null)
+                   alert("PDF split successfull!");
+
+            }
+            catch (error) {
+                console.error("Upload failed:", error);
+            }
+}
+const deleteHandler = async() => {
+    del("pdfInDb")
+    .then(() => del("array"))
+    .then(() => {
+        setArrayOfPageNumbers([]);
+        setPdfile(null);
+        setPreviewUrl(null);
+        setQpms("qp");
+    })
+    .catch(err => console.error(err));
+
+    
+    
+}
+        
+        return(
+        previewUrl && pdfile ? (
+            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+
             <div className="page-container">
+                <button className='cta' onClick={handleUpload}>
+                        Web
+                </button>
+                
+                <img onClick={()=>deleteHandler()} className='delete' src={trash} alt="" />
+                <div className="qp-ms">
+                    <div onClick={()=>setQpms('qp')} className="qp">
+                        QP
+                    </div>
+                    <div onClick={()=>setQpms('ms')} className="ms">
+                        MS
+                    </div>
+                    <div 
+                    style={qpms=='qp'?{left:'0.05em'}:{left:'9.1em'}}
+                    className="border">
+
+                    </div>
+
+                </div>
                 <div 
                     className='cover-container-main'
                     style={{ 
@@ -28,93 +173,145 @@ const App = () => {
                 >
                     {/* Render all thumbnails immediately */}
                     {totalPages > 0 && (
-                        Array.from({ length: totalPages }).map((_, index) => (
+                        Array.from({ length: totalPages }).map((_, index) => {
+                            // console.log(index,'in')
+                            return(
                             <CoverComponent 
-                              index={index} 
+                              index={index-1} 
                               Cover={Cover}
                               arrayOfPageNumbers={arrayOfPageNumbers}
                               setArrayOfPageNumbers={setArrayOfPageNumbers} 
                               startOrEnd={startOrEnd}
                               setStartOrEnd={setStartOrEnd}
+                              active={active}
+                              setActive={setActive}
                             />
-                        ))
+                            )
+                        })
                     )}
+                    
 
                     {/* Hidden viewer to provide context and load the PDF */}
-                    <div className='viewer'>
-                        <Viewer
-                            fileUrl={pdfUrl}
-                            plugins={[thumbnailPluginInstance]}
-                            onDocumentLoad={(e) => {
-                                setTotalPages(e.doc.numPages);
-                            }}
-                        />
-                    </div>
+                     <div className='viewer'> 
+                        <Viewer fileUrl={previewUrl} plugins={[thumbnailPluginInstance]} onDocumentLoad={(e) => { setTotalPages(e.doc.numPages); }} />
+                     </div>   
                 </div>
             </div>
-        </Worker>
-    );
+        </Worker>):(
+        <FullScreenPdfDrop
+            pdfile={pdfile}
+            setPdfile={setPdfile}
+        />
+        )
+    )
+           
+       
 };
 
 
-const CoverComponent = ({index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,startOrEnd,setStartOrEnd}) => {
-    const [addedToArray,setAddedToArray] = useState(false) 
-    const checkStartOrEndThenPush = () => {
-        if(startOrEnd =='end'){
-                setArrayOfPageNumbers(()=>{
-                   const newArray = [...arrayOfPageNumbers]
-                   const lastIndex = arrayOfPageNumbers.length - 1
-                   newArray[lastIndex] = {
-                       ...newArray[lastIndex],
-                       end:index,
-                   }
-                   return newArray
-               })
-               setStartOrEnd('start')
-        }
-        else{
-               
-               setArrayOfPageNumbers([...arrayOfPageNumbers,{
-                'start':index
-               }])
-               setStartOrEnd('end')
-
-       }
-       return 'end'
-    }
-    const clickHandler = (index,e) => {
-        //  e.stopPropagation()
-        console.log('ck')
-        if(!droppedDown){
-            if(!addedToArray){
-                setAddedToArray("blue")
-                checkStartOrEndThenPush(index)
-            }  
-            if(addedToArray=="blue"){
-                setAddedToArray("red")
-                setArrayOfPageNumbers([...arrayOfPageNumbers,index])
-                checkStartOrEndThenPush(index)
-            }
-            if(addedToArray=="red"){
-                setAddedToArray(false)
-                const indexOfTarget = arrayOfPageNumbers.map((object,indexOfTarget)=>{
-                if(object.end==index){
-                    return indexOfTarget
+const CoverComponent = ({active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,startOrEnd,setStartOrEnd}) => {
+    const [addedToArray,setAddedToArray] = useState('') 
+    useEffect(()=>{
+        let set;
+        const exists = arrayOfPageNumbers.some((obj)=> obj.start==index || obj.end==index)
+        if(exists){
+            arrayOfPageNumbers.map((obj)=>{
+                if(obj.start==index || obj.end==index){
+                    setAddedToArray("blue")
+                    console.log('sets')
                 }
-                })
-                const currentArray = [...arrayOfPageNumbers]
-                currentArray.pop(indexOfTarget)
-                setArrayOfPageNumbers([...currentArray])
-            }    
+                if(obj.start==index && obj.end==index){
+                    setAddedToArray("red")
+                }
+            })
         }
+    },[arrayOfPageNumbers])
+
+
+    const removeObj = (indexOfTarget,startEnd) => {
+        console.log(active)
+            const curArray = [...arrayOfPageNumbers]
+            const newObj = curArray[active.index]
+            console.log(indexOfTarget,'ttarger')
+            if(startEnd=='double'){
+                console.log('re',active.index,curArray)
+                setArrayOfPageNumbers((prev)=>{
+                     const finalArray = [...prev]
+                     finalArray.pop()
+                     return finalArray
+                })
+                // setArrayOfPageNumbers(prev => prev.slice(0, -1));
+
+                setAddedToArray('')
+            }
+            if(startEnd=='end'){
+                delete newObj.end
+                curArray[active.index] = newObj
+                setArrayOfPageNumbers(curArray)
+                setAddedToArray('')
+            }
+            
+
+    }
+    const clickHandler = (index) => {
+        console.log('clo',arrayOfPageNumbers.length)
+        const currentArray = [...arrayOfPageNumbers]
+        const exists = arrayOfPageNumbers.some((obj)=> obj.start==index || obj.end==index)
+        const lastIndex = arrayOfPageNumbers.length - 1
+        const lastObject = arrayOfPageNumbers[lastIndex]
+
+
+            //adders to blue
+            if(!exists){
+                if(lastObject){
+                    if(lastObject.start==active.start){
+                        console.log('trrrrrrrrrrr')
+                        setArrayOfPageNumbers(()=>{
+                            currentArray[lastIndex] = {
+                                ...currentArray[lastIndex],
+                                end:index
+                            }
+                            console.log(currentArray,'cccc')
+                            return currentArray
+                        })
+                    }
+                }
+                if(active.end || arrayOfPageNumbers.length==0){
+                    console.log('omw')
+                    setArrayOfPageNumbers([...arrayOfPageNumbers,{
+                            start:index
+                    }])
+                }
+            }
+            //add to red
+            if(active.start==index && !active.end && addedToArray=='blue'){
+                setArrayOfPageNumbers(()=>{
+                    currentArray[lastIndex] = {
+                        ...currentArray[lastIndex],
+                        end:index
+                    }
+                    return currentArray
+                })
+            }
+            //removers
+            if(active.start==index && active.end==index){
+                removeObj(index,'double')
+            }
+            if(active.start==index && active.end!=index && addedToArray=='red'){
+                 removeObj(index,'start')
+                //  setAddedToArray('')
+            }
+            if(active.end==index && active.start!==index){
+                removeObj(index,'end')
+                // setAddedToArray('')
+            }
+
         
-          console.log('clocks')
     }
 
 
-    const [dropedDownExists,setDropedDownExists] = useState(false)
     const dropDownHandler = option => {
-        console.log('in')
+        // console.log('in')
         arrayOfPageNumbers.map((object,targetIndex)=>{
             if(object.end===index){
                 setArrayOfPageNumbers(()=>{
@@ -129,24 +326,25 @@ const CoverComponent = ({index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,st
             }
         })
     }
-    const findIndex = () => {
-        
-    }
-    useEffect(()=>{
-        arrayOfPageNumbers.map((object)=>{
-            if(object.end==index){
-                setDropedDownExists(true)
-            }
-            else{
-                setDropedDownExists(false)
-            }
-        })
-        
-    },[arrayOfPageNumbers])
-    const options = [
-        'Surds',
-        'Fractions'
-    ]
+
+const options = [
+    'Bonding-Structure',
+    'Reactivity',
+    'Atomic-Structure',
+    'Seperation',
+    'Moles',
+    'Acids',
+    'Gases',
+    'Chemical-test',
+    'Organic',
+    'Rate-of-reaction',
+    'E=mcT',
+    'arrangement',
+    'Critical',
+    'Fusion',
+]
+
+
     const [droppedDown,setDropedDown] = useState(false)
     return(
         <div onClick={()=>{
@@ -196,16 +394,12 @@ const CoverComponent = ({index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,st
             
                 key={index}
                 getPageIndex={() => index + 1}
-                width={550}
+                width={850}
             />
 
             <div 
-            className='fore-ground'
-                style={
-                addedToArray=="blue"?{backgroundColor:'aqua'}:
-                addedToArray=="red"?{backgroundColor:'red'}:
-                {}
-                }>
+            className={`fore-ground ${addedToArray}`}
+            >
             </div>
           </div>
 

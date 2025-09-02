@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
+import { set, get } from "idb-keyval";
+const FullScreenPdfDrop = (props) => {
+  console.log("Child received props:", props);
 
-const UPLOAD_URL = "http://127.0.0.1:8000/upload";
-
-export default function FullScreenPdfDrop() {
   const [dragActive, setDragActive] = useState(false);
-  const [status, setStatus] = useState("");
-  const [fileName, setFileName] = useState("");
   const inputRef = useRef(null);
   // drag depth counter prevents flicker when moving over children
   const dragDepth = useRef(0);
-
+   useEffect(()=>{
+        console.log(props.pdfile,'d')
+    },[props.pdfile])
   useEffect(() => {
     const onDragOver = (e) => {
       e.preventDefault();
@@ -23,7 +23,7 @@ export default function FullScreenPdfDrop() {
       dragDepth.current += 1;
       setDragActive(true);
     };
-
+    
     const onDragLeave = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -32,6 +32,7 @@ export default function FullScreenPdfDrop() {
         setDragActive(false);
       }
     };
+    
 
     const onDrop = async (e) => {
       e.preventDefault();
@@ -47,9 +48,7 @@ export default function FullScreenPdfDrop() {
         alert("Please drop a PDF file (.pdf).");
         return;
       }
-
-      setFileName(picked.name);
-      await upload(picked);
+      props.setPdfile(picked);
     };
 
     // Attach to window so drop works anywhere on the screen
@@ -65,6 +64,19 @@ export default function FullScreenPdfDrop() {
       window.removeEventListener("drop", onDrop);
     };
   }, []);
+  useEffect(()=>{
+       if(props.pdfile) {
+         set("pdfInDb", props.pdfile)
+            .then(()=>{
+              console.log('file saved')
+            })
+       }
+       else{
+         get("pdfInDb").then((savedFile) => {
+            if (savedFile) props.setPdfile(savedFile);
+        });
+       }
+  },[props.pdfile])
 
   const isPdf = (file) => {
     // Some browsers don’t set type on drop; fall back to extension check.
@@ -84,40 +96,18 @@ export default function FullScreenPdfDrop() {
       e.target.value = ""; // reset
       return;
     }
-    setFileName(picked.name);
-    await upload(picked);
+    props.setPdfile(picked)
     e.target.value = ""; // allow re-upload same file
   };
 
-  const upload = async (pdfFile) => {
-    try {
-      setStatus("Uploading…");
-      const formData = new FormData();
-      formData.append("file", pdfFile);
 
-      const res = await fetch(UPLOAD_URL, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      console.log(data)
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
-    }
-
-      setStatus(`✅ Uploaded to: ${data.path || "server"}`);
-    } catch (err) {
-      console.error(err);
-      setStatus("❌ Upload failed. Check console and CORS/back-end.");
-    }
-  };
 
   return (
+    <div className="start">
+    <h1>Drop pdf file here</h1>
     <div
       onClick={pickFile}
-      className={`w-screen h-screen flex flex-col items-center justify-center select-none transition
+      className={`none w-screen h-screen flex flex-col items-center justify-center select-none transition
         ${dragActive ? "bg-blue-50" : "bg-gray-100"}`}
       style={{ cursor: "pointer" }}
       title="Click to choose a PDF or drag one anywhere"
@@ -129,24 +119,15 @@ export default function FullScreenPdfDrop() {
         onChange={onFilePicked}
         hidden
       />
-
-      <div className="text-center">
-        <div className="text-2xl font-semibold mb-2">
-          {dragActive ? "Drop your PDF…" : "Drag & Drop a PDF anywhere"}
-        </div>
-        <div className="text-sm text-gray-600">
-          or <span className="underline">click to choose</span>
-        </div>
-        {fileName && (
-          <div className="mt-4 text-gray-700">Selected: {fileName}</div>
-        )}
-        {status && <div className="mt-2">{status}</div>}
-      </div>
+      
 
       {/* Optional visual overlay */}
       {dragActive && (
         <div className="pointer-events-none fixed inset-0 border-4 border-dashed border-blue-400 rounded-2xl m-4" />
       )}
     </div>
+    </div>
   );
 }
+
+export default FullScreenPdfDrop
