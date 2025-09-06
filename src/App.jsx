@@ -9,13 +9,19 @@ import pdfFile from './../src/files/demo.pdf'
 import dropDown from './images/down-arrow.png'
 import trash from './images/trash.png'
 import FullScreenPdfDrop from './Upload';
+import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+import {scale, whileTap , motion} from 'framer-motion'
+import { h1 } from 'framer-motion/client';
+// const sub = 'igcse_chem_p2'
+// const sub = 'ial_mecha'
 const App = () => {
     const pdfUrl = pdfFile
     const thumbnailPluginInstance = thumbnailPlugin();
     const { Cover } = thumbnailPluginInstance;
     const [totalPages, setTotalPages] = useState(0);
     const [startOrEnd,setStartOrEnd] = useState(null)
-    
+    const [confirmed,setConfirmed] = useState(false)
+    const [prevConfirmed,setPrevConfirmed] = useState(null)
     const [arrayOfPageNumbers,setArrayOfPageNumbers] = useState([])
     const [pdfile,setPdfile] = useState(null)
      const [previewUrl, setPreviewUrl] = useState(null);
@@ -35,6 +41,19 @@ const App = () => {
         }
       });
     },[])
+    useEffect(()=>{
+         if(confirmed && {...confirmed}!={...prevConfirmed}){
+            set('confirmation',confirmed)
+         }
+    },[confirmed])
+    useEffect(()=>{
+         if(previewUrl){
+            get('confirmation').then((confirmation)=>{
+                setPrevConfirmed(confirmed)
+                setConfirmed(confirmation)
+            })
+         }
+    },[arrayOfPageNumbers,previewUrl])
     useEffect(()=>{
         const lastIndex = arrayOfPageNumbers.length - 1
         const lastObject = arrayOfPageNumbers[lastIndex]
@@ -56,6 +75,9 @@ const App = () => {
     useEffect(()=>{
         console.log(pdfile,pdfUrl,'pd')
     },[pdfile,pdfUrl])
+    useEffect(()=>{
+        console.log(confirmed,'c')
+    },[confirmed])
     useEffect(()=>{
         if (!pdfile) {
             setPreviewUrl(null);
@@ -91,7 +113,7 @@ const App = () => {
             // Append each range object as JSON string
             arrayOfPageNumbers.forEach((range, index) => {
                 console.log(range,'ds')
-            !range.topic?alert('Topic missing'):console.log('ok')
+            !range.topic?alert('Topic missing',arrayOfPageNumbers):console.log('ok')
             const newRange = {
                 ...range,
                 start:range.start + 2,
@@ -102,7 +124,8 @@ const App = () => {
              for (let pair of formData.entries()) {
                 console.log(pair[0] + ":", pair[1]);
             }
-            formData.append("doctype",JSON.stringify(qpms))
+            formData.append("doctype",JSON.stringify(confirmed.qpms))
+            formData.append("subject",JSON.stringify(confirmed.type))
             for (let [key, value] of formData.entries()) {
             console.log(key, value,'yooooo');
             }
@@ -110,7 +133,7 @@ const App = () => {
 
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/split-pdf/", {
+                const response = await fetch("http://192.168.10.198:8000/split-pdf/", {
                     method: "POST",
                     body: formData,
                 });
@@ -125,14 +148,20 @@ const App = () => {
                 console.error("Upload failed:", error);
             }
 }
+
 const deleteHandler = async() => {
     del("pdfInDb")
     .then(() => del("array"))
     .then(() => {
-        setArrayOfPageNumbers([]);
-        setPdfile(null);
-        setPreviewUrl(null);
-        setQpms("qp");
+        del('confirmation')
+        .then(()=>{
+            setArrayOfPageNumbers([]);
+            setPdfile(null);
+            setPreviewUrl(null);
+            setConfirmed(false)
+            setQpms("qp");
+
+        })
     })
     .catch(err => console.error(err));
 
@@ -141,29 +170,28 @@ const deleteHandler = async() => {
 }
         
         return(
-        previewUrl && pdfile ? (
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+            !confirmed && !previewUrl?(
+                 <FullScreenPdfDrop
+                    pdfile={pdfile}
+                    setPdfile={setPdfile}
+                />
+            ):!confirmed && previewUrl?(
+                 <Uploaded setConfirmed={setConfirmed} previewUrl={previewUrl}/> 
+            ):(
+                <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
 
             <div className="page-container">
-                <button className='cta' onClick={handleUpload}>
+                <motion.button whileTap={{scale:0.8}} className='cta' onClick={handleUpload}>
                         Web
-                </button>
+                </motion.button>
                 
-                <img onClick={()=>deleteHandler()} className='delete' src={trash} alt="" />
-                <div className="qp-ms">
-                    <div onClick={()=>setQpms('qp')} className="qp">
-                        QP
-                    </div>
-                    <div onClick={()=>setQpms('ms')} className="ms">
-                        MS
-                    </div>
-                    <div 
-                    style={qpms=='qp'?{left:'0.05em'}:{left:'9.1em'}}
-                    className="border">
-
-                    </div>
-
-                </div>
+                <motion.img 
+                  whileTap={{scale:0.9}} 
+                  onClick={()=>deleteHandler()} 
+                  className='delete' 
+                  src={trash} 
+                  alt="" 
+                />
                 <div 
                     className='cover-container-main'
                     style={{ 
@@ -185,6 +213,7 @@ const deleteHandler = async() => {
                               setStartOrEnd={setStartOrEnd}
                               active={active}
                               setActive={setActive}
+                              confirmed={confirmed}
                             />
                             )
                         })
@@ -197,19 +226,15 @@ const deleteHandler = async() => {
                      </div>   
                 </div>
             </div>
-        </Worker>):(
-        <FullScreenPdfDrop
-            pdfile={pdfile}
-            setPdfile={setPdfile}
-        />
-        )
+        </Worker>
+        )      
     )
            
        
 };
 
 
-const CoverComponent = ({active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,startOrEnd,setStartOrEnd}) => {
+const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,startOrEnd,setStartOrEnd}) => {
     const [addedToArray,setAddedToArray] = useState('') 
     useEffect(()=>{
         let set;
@@ -324,10 +349,11 @@ const CoverComponent = ({active,setActive,index,arrayOfPageNumbers,setArrayOfPag
                     return newArray
                 })
             }
+            return
         })
     }
 
-const options = [
+const igcseChemP1Options = [
     'Bonding-Structure',
     'Reactivity',
     'Atomic-Structure',
@@ -342,6 +368,34 @@ const options = [
     'arrangement',
     'Critical',
     'Fusion',
+]
+const igcseChemP2Options = [
+    'Solubility',
+    'Electro',
+    'Enthalpy',
+    'Bonding-Structure',
+    'Reactivity',
+    'Atomic-Structure',
+    'Seperation',
+    'Moles',
+    'Acids',
+    'Gases',
+    'Chemical-test',
+    'Organic',
+    'Rate-of-reaction',
+    'E=mcT',
+    'arrangement',
+    'Critical',
+    'Fusion',
+]
+const mechOptions = [
+    'vector',
+    'inclined plane',
+    'pulley',
+    'suvat',
+    'momentum',
+    'moment',
+
 ]
 
 
@@ -366,7 +420,8 @@ const options = [
                         
                            {droppedDown?(
                             <div className="dropdown-menu">
-                            {options.map((option)=>{
+                            {
+                              confirmed.list.map((option)=>{
                                return( 
                                <div onClick={()=>dropDownHandler(option)} className="section">
                                     <h1>
@@ -405,6 +460,165 @@ const options = [
 
 
         </div>
+    )
+}
+
+const Uploaded = ({previewUrl,setConfirmed}) => {
+    const [pageWidth,setPageWidth] = useState(null)
+    const handleDocumentLoad = (e) => {
+         console.log(e,'ppppppppp')
+    }
+    const [selectedType, setSelectedType] = useState(null);
+    const handleToggle = (value) => {
+        setSelectedType((prev) => (prev === value ? null : value));
+    };
+    const uploadHandler = () => {
+        if(selectedQpms && selectedType){
+            arrayOfPaperTypes.map((obj,i)=>{
+                if(obj.name===selectedType) {
+                    console.log(obj.list,'listt')
+                    setConfirmed({
+                    qpms:selectedQpms,
+                    type:selectedType,
+                    list:[...obj.list]
+                    })
+                    
+                }
+            })
+            
+        }
+    }
+    const arrayOfPaperTypes = [
+        
+       {
+            name:'igcse_chem_p1',
+            list:[
+                'Bonding-Structure',
+                'Reactivity',
+                'Atomic-Structure',
+                'Seperation',
+                'Moles',
+                'Acids',
+                'Gases',
+                'Chemical-test',
+                'Organic',
+                'Rate-of-reaction',
+                'E=mcT',
+                'arrangement',
+                'Critical',
+                'Fusion',
+            ]
+       },
+       {
+            name:'igcse_chem_p2',
+            list:[
+                'Bonding-Structure',
+                'Reactivity',
+                'Atomic-Structure',
+                'Seperation',
+                'Moles',
+                'Acids',
+                'Gases',
+                'Chemical-test',
+                'Organic',
+                'Rate-of-reaction',
+                'E=mcT',
+                'arrangement',
+                'Critical',
+                'Fusion',
+            ]
+       },
+       {
+            name:'ial_mecha',
+            list:[
+                'vector',
+                'inclined plane',
+                'pulley',
+                'suvat',
+                'momentum',
+                'moment',
+
+            ]
+       }
+    ]
+const [selectedQpms, setSelectedQpms] = useState("qp");
+    const handleChange = (event, newValue) => {
+    if (newValue !== null) {
+      setSelectedQpms(newValue);
+    }
+  };
+    return(
+         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+        <div className="second-page-container">
+            <div style={pageWidth?{width:pageWidth}:{}} className='intro'> 
+                <Viewer
+                defaultScale={0.5}
+
+                    initialPage={0}
+                    enableSmoothScroll={false} 
+                    fileUrl={previewUrl?previewUrl:''}
+                    onDocumentLoad={handleDocumentLoad}
+                    renderPage={(props) =>
+                            // 👇 Only render page if it’s the first one
+                            props.pageIndex === 0 ? props.canvasLayer.children : null
+                    } 
+                />
+
+            </div>  
+            <div className="select-paper-type-cont">
+                 {arrayOfPaperTypes?arrayOfPaperTypes.map((paperType)=>{
+                      console.log(paperType,'aa')
+                      return(
+                      <ToggleButton
+                        key={paperType.name}
+                        value={paperType.name}
+                        selected={selectedType === paperType.name}
+                        onChange={() => handleToggle(paperType.name)}
+                        sx={{
+                            px: 3,
+                            py: 1.5,
+                            borderRadius: "8px",
+                            textTransform: "none",
+                            fontWeight: 600,
+                            border: "2px solid",
+                            borderColor: "grey.400",
+                            bgcolor: "grey.100",
+                            color: "text.primary",
+                            "&.Mui-selected": {
+                            bgcolor: "grey.500",
+                            borderColor: "grey.700",
+                            color: "white",
+                            },
+                            "&.Mui-selected:hover": {
+                            bgcolor: "grey.600",
+                            },
+                            "&:hover": {
+                            bgcolor: "grey.200",
+                            },
+                        }}
+                        >
+                        {paperType.name}
+                      </ToggleButton>
+                 )
+                 }):''}
+            </div>
+            <div className="qpms">
+                    <ToggleButtonGroup
+                    value={selectedQpms}
+                    exclusive
+                    onChange={handleChange}
+                    aria-label="toggle options"
+                    >
+                    <ToggleButton className="wide-btn" value="qp">QP</ToggleButton>
+                    <ToggleButton className="wide-btn" value="ms">MS</ToggleButton>
+                    </ToggleButtonGroup>
+            </div>
+            <motion.button whileTap={{scale:0.8}} className='cta upload-cta' onClick={()=>uploadHandler()}>
+                Load
+            </motion.button>
+
+        </div>
+        </Worker>
     )
 }
 

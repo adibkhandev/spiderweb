@@ -47,6 +47,28 @@ code {
 .cover-container{
   flex: 1 0 25%;   
 }
+@media screen and (max-width:600px) {
+    .page-container{
+      max-width: 100svw !important;
+      /* overflow-x: hidden; */
+    }
+    .cover-container{
+      flex:1 0 100%;
+    }
+    .qp , .ms , .qp-ms , .border{
+       font-size: 0.7rem;
+    }
+    .cta{
+       font-size: 0.8rem !important;
+       top: 2.4em !important;
+    }
+    .qp-ms{
+      top: 2.8em !important;
+    }
+    .delete{
+      bottom: 2em !important;
+    }
+}
 .rpv-thumbnail__cover-image , .rpv-thumbnail__cover , .rpv-thumbnail__cover-inner{
   min-height: 0 !important ;
   width: 100% !important;
@@ -129,10 +151,10 @@ code {
   /* padding: 5em 5em; */
   height: 8em;
   width: 8em;
-  font-size: 1rem;
+  font-size: 1em;
   /* font-weight: bold; */
   font-weight: 400;
-  border-radius: 40rem;
+  border-radius: 40em;
   background-color: #a9e9fd8e;
   border: none;
   color: rgb(255, 255, 255);
@@ -156,6 +178,13 @@ code {
   align-items: center;
   height: 100svh;
   width: 100vw;
+  position: relative;
+ }
+ .plus{
+    position: absolute;
+    bottom: 2em;
+    right: 2em;
+    height: 3em;
  }
  .start>h1{
     font-weight: 400;
@@ -168,7 +197,7 @@ code {
    left: 1rem;
    z-index: 6;
    display: flex;
-   border-radius: 10px ;
+   border-radius: 0.7em ;
    overflow: hidden;
    opacity: 0.6;
    backdrop-filter: blur(10px);
@@ -190,8 +219,8 @@ code {
   position: absolute;
   top: 0.05em;
   left: 0.05em;
-  border: 3px white solid;
-  border-radius: 9px;
+  border: 0.2em white solid;
+  border-radius: 0.6em;
  }
  .delete{
   position: fixed;
@@ -201,4 +230,50 @@ code {
   z-index: 5;
   fill: white;
  }
- 
+ .second-page-container{
+   width: 100vw;
+   height: 100svh;
+   position: relative;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   
+ }
+ .intro{
+  position: absolute;
+  top: 2em;
+   left: 2em;
+   height: calc(18em*1.414213562);
+   width: 18em;
+ }
+ .select-paper-type-cont{
+     position: absolute;
+     right: 2em;
+     bottom: 2em;
+     display: flex;
+     flex-direction: column;
+     width: 20em;
+     gap: 10px;
+     flex-wrap: wrap;
+ }
+ .qpms{
+  position: absolute;
+  bottom: 1em;
+  left: 1em;
+  width: 5em !important;
+  height: 3em;
+ }
+  .upload-cta{
+      position: initial !important;
+      height: 10em !important;
+      width: 10em !important;
+      font-size: 1.6rem;  
+      margin-left: 2em;
+      background-color: rgb(41, 41, 41)
+}
+.wide-btn {
+  width: 10em;       /* fixed width */
+  height: 45px;       /* optional: make taller */
+  font-weight: 600;   /* bold text */
+  text-transform: none; /* keep text normal case */
+}

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { set, get } from "idb-keyval";
+import plus from './../src/images/plus.svg'
+import {scale, whileTap , motion} from 'framer-motion'
 const FullScreenPdfDrop = (props) => {
   console.log("Child received props:", props);
 
@@ -105,13 +107,6 @@ const FullScreenPdfDrop = (props) => {
   return (
     <div className="start">
     <h1>Drop pdf file here</h1>
-    <div
-      onClick={pickFile}
-      className={`none w-screen h-screen flex flex-col items-center justify-center select-none transition
-        ${dragActive ? "bg-blue-50" : "bg-gray-100"}`}
-      style={{ cursor: "pointer" }}
-      title="Click to choose a PDF or drag one anywhere"
-    >
       <input
         ref={inputRef}
         type="file"
@@ -119,13 +114,13 @@ const FullScreenPdfDrop = (props) => {
         onChange={onFilePicked}
         hidden
       />
+      <motion.img whileTap={{scale:0.8}} onClick={()=>pickFile()} className="plus" src={plus} alt="" />
       
 
       {/* Optional visual overlay */}
       {dragActive && (
         <div className="pointer-events-none fixed inset-0 border-4 border-dashed border-blue-400 rounded-2xl m-4" />
       )}
-    </div>
     </div>
   );
 }
