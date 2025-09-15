@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect , useMemo } from 'react';
 import { get , del , set} from "idb-keyval";
 import { useState } from 'react';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
@@ -14,17 +14,69 @@ import {scale, whileTap , motion} from 'framer-motion'
 import { h1 } from 'framer-motion/client';
 // const sub = 'igcse_chem_p2'
 // const sub = 'ial_mecha'
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+
+// Required for PDF worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+
 const App = () => {
+    // const thumbnailPluginInstance = React.useMemo(() => thumbnailPlugin(), []);
+
+    //added
+    const [currentPage,setCurrentPage]=useState(1)
+     const [previewUrl, setPreviewUrl] = useState(null);
+    const [images, setImages] = useState([]);
+    
+        useEffect(() => {
+            if(currentPage==3){
+                const convertPdfToImages = async () => {
+                    const pdf = await pdfjsLib.getDocument(previewUrl).promise;
+                    const numPages = pdf.numPages;
+                    const tempImages = [];
+        
+                    for (let i = 1; i <= numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 2 }); // adjust scale for quality
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+        
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+        
+                        await page.render({ canvasContext: context, viewport }).promise;
+        
+                        // Convert canvas to base64 image
+                        const imgData = canvas.toDataURL('image/png');
+                        tempImages.push(imgData);
+                    }
+        
+                    setImages(tempImages);
+                };
+        
+                convertPdfToImages();
+
+            }
+        }, [currentPage]);
+    
+    //
+    useEffect(()=>{
+       console.log(images,'imggg')
+    },[images])
+
+
+
     const pdfUrl = pdfFile
     const thumbnailPluginInstance = thumbnailPlugin();
     const { Cover } = thumbnailPluginInstance;
+    
     const [totalPages, setTotalPages] = useState(0);
     const [startOrEnd,setStartOrEnd] = useState(null)
     const [confirmed,setConfirmed] = useState(false)
     const [prevConfirmed,setPrevConfirmed] = useState(null)
     const [arrayOfPageNumbers,setArrayOfPageNumbers] = useState([])
     const [pdfile,setPdfile] = useState(null)
-     const [previewUrl, setPreviewUrl] = useState(null);
+    
      const [qpms,setQpms] = useState('qp')
     console.log("Rendering Parent");
     const [active,setActive] = useState({
@@ -44,6 +96,7 @@ const App = () => {
     useEffect(()=>{
          if(confirmed && {...confirmed}!={...prevConfirmed}){
             set('confirmation',confirmed)
+            console.log('setting conf')
          }
     },[confirmed])
     useEffect(()=>{
@@ -73,8 +126,13 @@ const App = () => {
         console.log(arrayOfPageNumbers,arrayOfPageNumbers.length,'aa')
     },[arrayOfPageNumbers])
     useEffect(()=>{
-        console.log(pdfile,pdfUrl,'pd')
+        if(pdfile || pdfUrl){
+            console.log(pdfile,pdfUrl,'pd')
+
+        }
     },[pdfile,pdfUrl])
+
+
     useEffect(()=>{
         console.log(confirmed,'c')
     },[confirmed])
@@ -133,15 +191,14 @@ const App = () => {
 
 
             try {
-                const response = await fetch("http://192.168.10.198:8000/split-pdf/", {
+                const response = await fetch("http://localhost:8000/split-pdf/", {
                     method: "POST",
                     body: formData,
                 });
                 const data = await response.json();
-                   console.log("Server response:", data);
-                   await del("pdfInDb")
-                   setPdfile(null)
-                   alert("PDF split successfull!");
+                console.log("Server response:", data);
+                await deleteHandler()
+                alert("PDF split successfull!");
 
             }
             catch (error) {
@@ -149,6 +206,22 @@ const App = () => {
             }
 }
 
+useEffect(()=>{
+    console.log(previewUrl,'pre')
+    if(previewUrl && confirmed){
+        console.log('setting')
+        setCurrentPage(3)
+    }
+    if(previewUrl && !confirmed){
+        setCurrentPage(2)
+    }
+    if(!previewUrl && !confirmed){
+        setCurrentPage(1)
+    }
+},[previewUrl,confirmed])
+useEffect(()=>{
+    console.log(currentPage,'cc')
+},[currentPage])
 const deleteHandler = async() => {
     del("pdfInDb")
     .then(() => del("array"))
@@ -170,12 +243,12 @@ const deleteHandler = async() => {
 }
         
         return(
-            !confirmed && !previewUrl?(
+            currentPage==1?(
                  <FullScreenPdfDrop
                     pdfile={pdfile}
                     setPdfile={setPdfile}
                 />
-            ):!confirmed && previewUrl?(
+            ):currentPage==2?(
                  <Uploaded setConfirmed={setConfirmed} previewUrl={previewUrl}/> 
             ):(
                 <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
@@ -200,7 +273,7 @@ const deleteHandler = async() => {
                     }}
                 >
                     {/* Render all thumbnails immediately */}
-                    {totalPages > 0 && (
+                    {/* {totalPages > 0 && (
                         Array.from({ length: totalPages }).map((_, index) => {
                             // console.log(index,'in')
                             return(
@@ -217,7 +290,27 @@ const deleteHandler = async() => {
                             />
                             )
                         })
-                    )}
+                    )} */}
+                    {/* Old place of cover*/}
+                    {
+                        images && images.length>0 &&(
+                            images.map((image,index)=>{
+                                return(
+                                <CoverComponent
+                                    index={index}
+                                    url={image}
+                                    arrayOfPageNumbers={arrayOfPageNumbers}
+                                    setArrayOfPageNumbers={setArrayOfPageNumbers} 
+                                    startOrEnd={startOrEnd}
+                                    setStartOrEnd={setStartOrEnd}
+                                    active={active}
+                                    setActive={setActive}
+                                    confirmed={confirmed}
+                                />
+                                )
+                            })
+                        )
+                    }
                     
 
                     {/* Hidden viewer to provide context and load the PDF */}
@@ -233,8 +326,10 @@ const deleteHandler = async() => {
        
 };
 
-
-const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,Cover,startOrEnd,setStartOrEnd}) => {
+const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,url,startOrEnd,setStartOrEnd}) => {
+    // const PdfCover = React.memo(({ Cover, fileUrl }) => {
+    // return <Cover fileUrl={fileUrl} />;
+    // });
     const [addedToArray,setAddedToArray] = useState('') 
     useEffect(()=>{
         let set;
@@ -352,53 +447,13 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
             return
         })
     }
+    const isEnd = useMemo(()=>{
+        if(active.end==index) return true
 
-const igcseChemP1Options = [
-    'Bonding-Structure',
-    'Reactivity',
-    'Atomic-Structure',
-    'Seperation',
-    'Moles',
-    'Acids',
-    'Gases',
-    'Chemical-test',
-    'Organic',
-    'Rate-of-reaction',
-    'E=mcT',
-    'arrangement',
-    'Critical',
-    'Fusion',
-]
-const igcseChemP2Options = [
-    'Solubility',
-    'Electro',
-    'Enthalpy',
-    'Bonding-Structure',
-    'Reactivity',
-    'Atomic-Structure',
-    'Seperation',
-    'Moles',
-    'Acids',
-    'Gases',
-    'Chemical-test',
-    'Organic',
-    'Rate-of-reaction',
-    'E=mcT',
-    'arrangement',
-    'Critical',
-    'Fusion',
-]
-const mechOptions = [
-    'vector',
-    'inclined plane',
-    'pulley',
-    'suvat',
-    'momentum',
-    'moment',
+    },[active.end])
+  
 
-]
-
-
+    
     const [droppedDown,setDropedDown] = useState(false)
     return(
         <div onClick={()=>{
@@ -413,27 +468,29 @@ const mechOptions = [
             if(object.end===index)
               {
                 return (
-                    <div style={droppedDown?{zIndex:5}:{}} className="drop-container">
-                        <div onClick={()=> setDropedDown(true)} className="drop-icon-cont">
-                          <img  className='drop-down' src={dropDown} alt="" />
+                    <div className="positioner">
+                        <div style={droppedDown?{zIndex:5}:{}} className="drop-container">
+                            <div onClick={()=> setDropedDown(true)} className="drop-icon-cont">
+                            <img  className='drop-down' src={dropDown} alt="" />
+                            </div>
+                            
+                            {droppedDown && droppedDown?(
+                                <div className="dropdown-menu">
+                                {
+                                confirmed.list.map((option)=>{
+                                return( 
+                                <div onClick={()=>dropDownHandler(option)} className="section">
+                                        <h1>
+                                            {option}
+                                        </h1>
+                                    </div>
+                                )
+                                })}
+                            </div>
+                            ):''}
+                            
+                            
                         </div>
-                        
-                           {droppedDown?(
-                            <div className="dropdown-menu">
-                            {
-                              confirmed.list.map((option)=>{
-                               return( 
-                               <div onClick={()=>dropDownHandler(option)} className="section">
-                                    <h1>
-                                        {option}
-                                    </h1>
-                                </div>
-                               )
-                            })}
-                           </div>
-                           ):''}
-                        
-                        
                     </div>
                       )
               }
@@ -444,12 +501,10 @@ const mechOptions = [
 
 
           <div onClick={()=>{clickHandler(index)
-           }} className="">
-            <Cover
-            
-                key={index}
-                getPageIndex={() => index + 1}
-                width={850}
+           }} className="img-cont">
+            <img
+                className='img'
+                src={url}
             />
 
             <div 
@@ -510,6 +565,37 @@ const Uploaded = ({previewUrl,setConfirmed}) => {
             ]
        },
        {
+            name:'igcse_phy_p1',
+            list:[
+                'Motion',
+                'Variable-investigation',
+                'Electro-circuit',
+                'Elctro-experiment',
+                'Electro-explain',
+                'Wave-Refract',
+                'Wave-explain',
+                'Wave-Calc',
+                'Wave-Uses',
+                'Doppler',
+                'Energy',
+                'Pressure-diff',
+                'PTV',
+                'Motor-dynamics',
+                'Flemming',
+                'Radiation',
+                'Nuke-reactor',
+                'Orbital',
+                'Astro-cycle',
+                'Hookes-law',
+                'Heat-transfer',
+                'Density',
+                'Magnets',
+                'Fusion',
+                'Critical'
+                
+            ]
+        },
+        {
             name:'igcse_chem_p2',
             list:[
                 'Bonding-Structure',

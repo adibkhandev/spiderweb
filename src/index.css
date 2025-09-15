@@ -277,3 +277,12 @@ code {
   font-weight: 600;   /* bold text */
   text-transform: none; /* keep text normal case */
 }
+.img{
+  width: 100%;
+
+}
+.img-cont{
+  width: 100%;
+  /* position: absolute;
+  top: 0; */
+}
