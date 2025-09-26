@@ -1,4 +1,4 @@
-import React, { useEffect , useMemo } from 'react';
+import React, { useEffect , useMemo , useRef} from 'react';
 import { get , del , set} from "idb-keyval";
 import { useState } from 'react';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
@@ -8,10 +8,11 @@ import '@react-pdf-viewer/thumbnail/lib/styles/index.css';
 import pdfFile from './../src/files/demo.pdf'
 import dropDown from './images/down-arrow.png'
 import trash from './images/trash.png'
+import re from './images/arrows.png'
 import FullScreenPdfDrop from './Upload';
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import {scale, whileTap , motion} from 'framer-motion'
-import { h1 } from 'framer-motion/client';
+import { div, h1 } from 'framer-motion/client';
 // const sub = 'igcse_chem_p2'
 // const sub = 'ial_mecha'
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
@@ -21,9 +22,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 
 const App = () => {
-    // const thumbnailPluginInstance = React.useMemo(() => thumbnailPlugin(), []);
-
-    //added
     const [currentPage,setCurrentPage]=useState(1)
      const [previewUrl, setPreviewUrl] = useState(null);
     const [images, setImages] = useState([]);
@@ -63,12 +61,12 @@ const App = () => {
     useEffect(()=>{
        console.log(images,'imggg')
     },[images])
+       const arrayOfPaperTypes = require('./paperTypes.json');
 
-
+  
 
     const pdfUrl = pdfFile
     const thumbnailPluginInstance = thumbnailPlugin();
-    const { Cover } = thumbnailPluginInstance;
     
     const [totalPages, setTotalPages] = useState(0);
     const [startOrEnd,setStartOrEnd] = useState(null)
@@ -76,7 +74,8 @@ const App = () => {
     const [prevConfirmed,setPrevConfirmed] = useState(null)
     const [arrayOfPageNumbers,setArrayOfPageNumbers] = useState([])
     const [pdfile,setPdfile] = useState(null)
-    
+    const [selectedQpms,setSelectedQpms] = useState('qp')
+    const [selectedType,setSelectedType] = useState(null)
      const [qpms,setQpms] = useState('qp')
     console.log("Rendering Parent");
     const [active,setActive] = useState({
@@ -122,20 +121,20 @@ const App = () => {
             })
         }
     },[arrayOfPageNumbers])
-    useEffect(()=>{
-        console.log(arrayOfPageNumbers,arrayOfPageNumbers.length,'aa')
-    },[arrayOfPageNumbers])
-    useEffect(()=>{
-        if(pdfile || pdfUrl){
-            console.log(pdfile,pdfUrl,'pd')
+    // useEffect(()=>{
+    //     console.log(arrayOfPageNumbers,arrayOfPageNumbers.length,'aa')
+    // },[arrayOfPageNumbers])
+    // useEffect(()=>{
+    //     if(pdfile || pdfUrl){
+    //         console.log(pdfile,pdfUrl,'pd')
 
-        }
-    },[pdfile,pdfUrl])
+    //     }
+    // },[pdfile,pdfUrl])
 
 
-    useEffect(()=>{
-        console.log(confirmed,'c')
-    },[confirmed])
+    // useEffect(()=>{
+    //     console.log(confirmed,'c')
+    // },[confirmed])
     useEffect(()=>{
         if (!pdfile) {
             setPreviewUrl(null);
@@ -174,8 +173,8 @@ const App = () => {
             !range.topic?alert('Topic missing',arrayOfPageNumbers):console.log('ok')
             const newRange = {
                 ...range,
-                start:range.start + 2,
-                end:range.end + 2,
+                start:range.start + 1,
+                end:range.end + 1,
             }
             formData.append("ranges", JSON.stringify(newRange));
             });
@@ -191,19 +190,35 @@ const App = () => {
 
 
             try {
-                const response = await fetch("http://localhost:8000/split-pdf/", {
-                    method: "POST",
-                    body: formData,
-                });
-                const data = await response.json();
-                console.log("Server response:", data);
-                await deleteHandler()
-                alert("PDF split successfull!");
+                fetch("http://192.168.10.198:8000/hi/")
+                .then(async()=>{
+                    const response = await fetch("http://192.168.10.198:8000/split-pdf/", {
+                        method: "POST",
+                        body: formData,
+                        cache:"no-store"
+                    });
+                    const data = await response.json();
+                    console.log("Server response:", data);
+                    await deleteHandler()
+                    alert("PDF split successfull!");
+
+                })
+                .catch((err)=>{
+                    alert(err)
+                })
+                
 
             }
             catch (error) {
                 console.error("Upload failed:", error);
+                alert(error);
             }
+}
+const refresh = () => {
+    fetch("http://192.168.10.198:8000/hi/")
+     .then(()=>{
+         alert('refreshed')
+     })
 }
 
 useEffect(()=>{
@@ -231,7 +246,8 @@ const deleteHandler = async() => {
             setArrayOfPageNumbers([]);
             setPdfile(null);
             setPreviewUrl(null);
-            setConfirmed(false)
+            setConfirmed(false);
+            setImages([])
             setQpms("qp");
 
         })
@@ -249,75 +265,77 @@ const deleteHandler = async() => {
                     setPdfile={setPdfile}
                 />
             ):currentPage==2?(
-                 <Uploaded setConfirmed={setConfirmed} previewUrl={previewUrl}/> 
+                 <Uploaded arrayOfPaperTypes={arrayOfPaperTypes} selectedQpms={selectedQpms} setSelectedQpms={setSelectedQpms} selectedType={selectedType} setSelectedType={setSelectedType} setConfirmed={setConfirmed} previewUrl={previewUrl}/> 
             ):(
                 <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
 
             <div className="page-container">
-                <motion.button whileTap={{scale:0.8}} className='cta' onClick={handleUpload}>
-                        Web
-                </motion.button>
-                
-                <motion.img 
-                  whileTap={{scale:0.9}} 
-                  onClick={()=>deleteHandler()} 
-                  className='delete' 
-                  src={trash} 
-                  alt="" 
-                />
-                <div 
-                    className='cover-container-main'
-                    style={{ 
-                        borderRadius: '12px',
-                        maxWidth: '100%',
-                    }}
-                >
-                    {/* Render all thumbnails immediately */}
-                    {/* {totalPages > 0 && (
-                        Array.from({ length: totalPages }).map((_, index) => {
-                            // console.log(index,'in')
-                            return(
-                            <CoverComponent 
-                              index={index-1} 
-                              Cover={Cover}
-                              arrayOfPageNumbers={arrayOfPageNumbers}
-                              setArrayOfPageNumbers={setArrayOfPageNumbers} 
-                              startOrEnd={startOrEnd}
-                              setStartOrEnd={setStartOrEnd}
-                              active={active}
-                              setActive={setActive}
-                              confirmed={confirmed}
+                {
+                    images.length<1?(
+                        <div className='loader-cont'>
+                            <div class="loader"></div>
+                        </div>
+                    ):(
+                        <>
+                        <motion.button whileTap={{scale:0.8}} className='cta' onClick={handleUpload}>
+                                Web
+                        </motion.button>
+                        
+                        <motion.img 
+                        whileTap={{scale:0.9}} 
+                        onClick={()=>deleteHandler()} 
+                        className='delete' 
+                        src={trash} 
+                        alt="" 
+                        />
+                        <motion.div 
+                        className="refresh"
+                        whileTap={{scale:0.9}} 
+                        onClick={()=>refresh()} 
+                        >
+                            <img 
+                                src={re} 
+                                alt="" 
                             />
-                            )
-                        })
-                    )} */}
-                    {/* Old place of cover*/}
-                    {
-                        images && images.length>0 &&(
-                            images.map((image,index)=>{
-                                return(
-                                <CoverComponent
-                                    index={index}
-                                    url={image}
-                                    arrayOfPageNumbers={arrayOfPageNumbers}
-                                    setArrayOfPageNumbers={setArrayOfPageNumbers} 
-                                    startOrEnd={startOrEnd}
-                                    setStartOrEnd={setStartOrEnd}
-                                    active={active}
-                                    setActive={setActive}
-                                    confirmed={confirmed}
-                                />
-                                )
-                            })
-                        )
-                    }
-                    
 
-                    {/* Hidden viewer to provide context and load the PDF */}
-                     <div className='viewer'> 
-                        <Viewer fileUrl={previewUrl} plugins={[thumbnailPluginInstance]} onDocumentLoad={(e) => { setTotalPages(e.doc.numPages); }} />
-                     </div>   
-                </div>
+                        </motion.div>
+                        <div 
+                            className='cover-container-main'
+                            style={{ 
+                                borderRadius: '12px',
+                                maxWidth: '100%',
+                            }}
+                        >
+                            {
+                                images && images.length>0 &&(
+                                    images.map((image,index)=>{
+                                        return(
+                                        <CoverComponent
+                                            index={index}
+                                            url={image}
+                                            arrayOfPageNumbers={arrayOfPageNumbers}
+                                            setArrayOfPageNumbers={setArrayOfPageNumbers} 
+                                            startOrEnd={startOrEnd}
+                                            setStartOrEnd={setStartOrEnd}
+                                            active={active}
+                                            setActive={setActive}
+                                            confirmed={confirmed}
+                                        />
+                                        )
+                                    })
+                                )
+                            }
+                            
+
+                            {/* Hidden viewer to provide context and load the PDF */}
+                            <div className='viewer'> 
+                                <Viewer fileUrl={previewUrl} plugins={[thumbnailPluginInstance]} onDocumentLoad={(e) => { setTotalPages(e.doc.numPages); }} />
+                            </div>   
+                        </div>
+                        </>
+                    )
+                }
+                
             </div>
         </Worker>
         )      
@@ -327,9 +345,7 @@ const deleteHandler = async() => {
 };
 
 const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,setArrayOfPageNumbers,url,startOrEnd,setStartOrEnd}) => {
-    // const PdfCover = React.memo(({ Cover, fileUrl }) => {
-    // return <Cover fileUrl={fileUrl} />;
-    // });
+
     const [addedToArray,setAddedToArray] = useState('') 
     useEffect(()=>{
         let set;
@@ -360,7 +376,6 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
                      finalArray.pop()
                      return finalArray
                 })
-                // setArrayOfPageNumbers(prev => prev.slice(0, -1));
 
                 setAddedToArray('')
             }
@@ -432,6 +447,7 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
 
     const dropDownHandler = option => {
         // console.log('in')
+        setDropedDown(false)
         arrayOfPageNumbers.map((object,targetIndex)=>{
             if(object.end===index){
                 setArrayOfPageNumbers(()=>{
@@ -443,6 +459,7 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
                     }
                     return newArray
                 })
+                
             }
             return
         })
@@ -453,15 +470,10 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
     },[active.end])
   
 
-    
+    const inpRef = useRef(null)
     const [droppedDown,setDropedDown] = useState(false)
     return(
-        <div onClick={()=>{
-            if(droppedDown){
-                setDropedDown(false)
-            }
-        }}  
-        className='cover-container'>
+        <div className='cover-container'>
           
           {/* DropDown */}
           {arrayOfPageNumbers.map((object)=>{
@@ -470,7 +482,7 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
                 return (
                     <div className="positioner">
                         <div style={droppedDown?{zIndex:5}:{}} className="drop-container">
-                            <div onClick={()=> setDropedDown(true)} className="drop-icon-cont">
+                            <div onClick={()=> setDropedDown(!droppedDown)} className="drop-icon-cont">
                             <img  className='drop-down' src={dropDown} alt="" />
                             </div>
                             
@@ -479,13 +491,20 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
                                 {
                                 confirmed.list.map((option)=>{
                                 return( 
-                                <div onClick={()=>dropDownHandler(option)} className="section">
+                                <div onClick={()=>{
+                                    dropDownHandler(option)
+                                }} className="section">
                                         <h1>
                                             {option}
                                         </h1>
                                     </div>
                                 )
                                 })}
+                                <div className="inp-cont">
+                                    <input  ref={inpRef} type="text" />
+                                    <button onClick={()=>dropDownHandler(inpRef.current.value)} >Go</button>
+                                </div>
+
                             </div>
                             ):''}
                             
@@ -518,12 +537,20 @@ const CoverComponent = ({confirmed,active,setActive,index,arrayOfPageNumbers,set
     )
 }
 
-const Uploaded = ({previewUrl,setConfirmed}) => {
+const Uploaded = ({
+    previewUrl,
+    setConfirmed,
+    selectedType,
+    setSelectedType,
+    selectedQpms,
+    setSelectedQpms,
+    arrayOfPaperTypes
+}) => {
     const [pageWidth,setPageWidth] = useState(null)
     const handleDocumentLoad = (e) => {
          console.log(e,'ppppppppp')
     }
-    const [selectedType, setSelectedType] = useState(null);
+    // const [selectedType, setSelectedType] = useState(null);
     const handleToggle = (value) => {
         setSelectedType((prev) => (prev === value ? null : value));
     };
@@ -543,91 +570,8 @@ const Uploaded = ({previewUrl,setConfirmed}) => {
             
         }
     }
-    const arrayOfPaperTypes = [
-        
-       {
-            name:'igcse_chem_p1',
-            list:[
-                'Bonding-Structure',
-                'Reactivity',
-                'Atomic-Structure',
-                'Seperation',
-                'Moles',
-                'Acids',
-                'Gases',
-                'Chemical-test',
-                'Organic',
-                'Rate-of-reaction',
-                'E=mcT',
-                'arrangement',
-                'Critical',
-                'Fusion',
-            ]
-       },
-       {
-            name:'igcse_phy_p1',
-            list:[
-                'Motion',
-                'Variable-investigation',
-                'Electro-circuit',
-                'Elctro-experiment',
-                'Electro-explain',
-                'Wave-Refract',
-                'Wave-explain',
-                'Wave-Calc',
-                'Wave-Uses',
-                'Doppler',
-                'Energy',
-                'Pressure-diff',
-                'PTV',
-                'Motor-dynamics',
-                'Flemming',
-                'Radiation',
-                'Nuke-reactor',
-                'Orbital',
-                'Astro-cycle',
-                'Hookes-law',
-                'Heat-transfer',
-                'Density',
-                'Magnets',
-                'Fusion',
-                'Critical'
-                
-            ]
-        },
-        {
-            name:'igcse_chem_p2',
-            list:[
-                'Bonding-Structure',
-                'Reactivity',
-                'Atomic-Structure',
-                'Seperation',
-                'Moles',
-                'Acids',
-                'Gases',
-                'Chemical-test',
-                'Organic',
-                'Rate-of-reaction',
-                'E=mcT',
-                'arrangement',
-                'Critical',
-                'Fusion',
-            ]
-       },
-       {
-            name:'ial_mecha',
-            list:[
-                'vector',
-                'inclined plane',
-                'pulley',
-                'suvat',
-                'momentum',
-                'moment',
-
-            ]
-       }
-    ]
-const [selectedQpms, setSelectedQpms] = useState("qp");
+ 
+// const [selectedQpms, setSelectedQpms] = useState("qp");
     const handleChange = (event, newValue) => {
     if (newValue !== null) {
       setSelectedQpms(newValue);

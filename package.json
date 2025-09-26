@@ -13,6 +13,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "framer-motion": "^12.23.12",
+    "http-proxy-middleware": "^3.0.5",
     "idb-keyval": "^6.2.2",
     "pdfjs-dist": "^3.4.120",
     "react": "^19.1.1",

@@ -1,0 +1,84 @@
+[
+  {
+    "name": "igcse_chem_p1",
+    "list": [
+      "Bonding-Structure",
+      "Reactivity",
+      "Atomic-Structure",
+      "Seperation",
+      "Moles",
+      "Acids",
+      "Gases",
+      "Chemical-test",
+      "Organic",
+      "Rate-of-reaction",
+      "E=mcT",
+      "arrangement",
+      "Critical",
+      "Fusion"
+    ]
+  },
+  {
+    "name": "igcse_phy_p1",
+    "list": [
+      "Forces",
+      "Motion",
+      "Variable-investigation",
+      "Electro-circuit",
+      "Elctro-experiment",
+      "Electro-explain",
+      "Wave-Refract",
+      "Wave-explain",
+      "Wave-Calc",
+      "Wave-Uses",
+      "Doppler",
+      "Energy",
+      "Energy-source",
+      "Pressure-diff",
+      "Pressure",
+      "PTV",
+      "Motor-dynamics",
+      "Flemming",
+      "Radiation",
+      "Nuke-reactor",
+      "Orbital",
+      "Astro-cycle",
+      "Hookes-law",
+      "Heat-transfer",
+      "Density",
+      "Magnets",
+      "Fusion",
+      "Critical"
+    ]
+  },
+  {
+    "name": "igcse_chem_p2",
+    "list": [
+      "Bonding-Structure",
+      "Reactivity",
+      "Atomic-Structure",
+      "Seperation",
+      "Moles",
+      "Acids",
+      "Gases",
+      "Chemical-test",
+      "Organic",
+      "Rate-of-reaction",
+      "E=mcT",
+      "arrangement",
+      "Critical",
+      "Fusion"
+    ]
+  },
+  {
+    "name": "ial_mecha",
+    "list": [
+      "vector",
+      "inclined plane",
+      "pulley",
+      "suvat",
+      "momentum",
+      "moment"
+    ]
+  }
+]
